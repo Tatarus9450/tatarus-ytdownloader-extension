@@ -1,86 +1,97 @@
-# Tatarus YT Downloader
-
-Chrome Extension สำหรับดาวน์โหลดวิดีโอและเพลงจาก YouTube
+# 🎬 Tatarus YT Downloader
 
 <div align="center">
-  <img src="extension/icons/icon-128.png" alt="Extension Preview" width="300">
+  <img src="extension/icons/icon-128.png" alt="Tatarus YT Downloader" width="128">
+  <br><br>
+  <strong>Chrome Extension สำหรับดาวน์โหลดวิดีโอและเพลงจาก YouTube</strong>
+  <br><br>
+  
+  [![License: MIT](https://img.shields.io/badge/License-MIT-red.svg)](LICENSE)
+  [![Python 3.8+](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
+  [![yt-dlp](https://img.shields.io/badge/Powered%20by-yt--dlp-green.svg)](https://github.com/yt-dlp/yt-dlp)
 </div>
 
-## ✨ Features
+---
 
-- 🎬 **ดาวน์โหลดวิดีโอ MP4** - รองรับหลายคุณภาพ (360p - 4K)
-- 🎵 **ดาวน์โหลดเสียง MP3** - รองรับหลาย bitrate
-- 📊 **Dynamic Quality** - แสดงคุณภาพที่มีจริงของแต่ละวิดีโอ
-- 🎨 **UI สวยงาม** - Dark theme ทันสมัย
+## 📖 เกี่ยวกับโปรเจค
+
+**Tatarus YT Downloader** เป็น Chrome Extension ที่ช่วยให้คุณดาวน์โหลดวิดีโอและเพลงจาก YouTube ได้อย่างง่ายดาย โดยใช้ `yt-dlp` เป็น backend สำหรับประมวลผล
+
+### ✨ Features
+
+| Feature | Description |
+|---------|-------------|
+| 🎬 **วิดีโอ MP4** | ดาวน์โหลดวิดีโอคุณภาพ 360p - 4K |
+| 🎵 **เสียง MP3** | ดาวน์โหลดเพลงคุณภาพสูงถึง 320kbps |
+| 📊 **Dynamic Quality** | แสดงคุณภาพที่มีจริงของแต่ละวิดีโอ |
+| 🎨 **Dark UI** | หน้าตาสวยงาม ทันสมัย |
+| ⚡ **Progress Bar** | ติดตามความคืบหน้าแบบ Real-time |
 
 ---
 
-## 🚀 Installation (2 ขั้นตอน)
+## � โครงสร้างโปรเจค
 
-### ขั้นตอนที่ 1: Deploy Server (ฟรี!)
-
-1. **สมัคร [Render.com](https://render.com)** (ฟรี, ใช้ GitHub login ได้)
-
-2. **Fork repo นี้** ไปยัง GitHub ของคุณ
-
-3. **สร้าง New Web Service บน Render:**
-   - คลิก "New +" → "Web Service"
-   - Connect GitHub repo ที่ fork
-   - ตั้งค่า:
-     ```
-     Root Directory: server
-     Build Command: pip install -r requirements.txt
-     Start Command: gunicorn app:app
-     Instance Type: Free
-     ```
-   - คลิก "Create Web Service"
-
-4. **คัดลอก URL** ที่ได้ เช่น `https://tatarus-ytdownloader.onrender.com`
-
-### ขั้นตอนที่ 2: ติดตั้ง Extension
-
-1. **แก้ไขไฟล์** `extension/popup.js`:
-   ```javascript
-   const API_BASE_URL = 'https://YOUR-APP-NAME.onrender.com';
-   // เปลี่ยนเป็น URL ที่ได้จาก Render.com
-   ```
-
-2. **ติดตั้ง Extension:**
-   - เปิด `chrome://extensions/`
-   - เปิด Developer mode
-   - คลิก "Load unpacked" → เลือกโฟลเดอร์ `extension`
+```
+tatarus-ytdownloader-extension/
+├── extension/           # Chrome Extension
+│   ├── manifest.json    # Extension configuration
+│   ├── popup.html       # UI หลัก
+│   ├── popup.css        # Styles
+│   ├── popup.js         # Logic
+│   └── icons/           # Extension icons
+└── server/              # Python Backend
+    ├── app.py           # Flask API server
+    ├── requirements.txt # Python dependencies
+    └── render.yaml      # Deployment config
+```
 
 ---
 
-## 📖 วิธีใช้งาน
+## 🚀 วิธีใช้งาน
+
+### 1. ติดตั้ง Dependencies
+
+```bash
+cd server
+pip install -r requirements.txt
+```
+
+### 2. รัน Backend Server
+
+```bash
+cd server
+python app.py
+```
+
+Server จะรันที่ `http://localhost:5000`
+
+### 3. ติดตั้ง Extension
+
+1. เปิด `chrome://extensions/`
+2. เปิด **Developer mode**
+3. คลิก **Load unpacked**
+4. เลือกโฟลเดอร์ `extension`
+
+### 4. ดาวน์โหลดวิดีโอ
 
 1. เปิดวิดีโอ YouTube
 2. คลิกไอคอน Extension
-3. เลือกรูปแบบ (MP4/MP3)
+3. เลือก MP4 หรือ MP3
 4. เลือกคุณภาพ
-5. กดดาวน์โหลด!
+5. กด **ดาวน์โหลด**
 
 ---
 
-## ⚠️ หมายเหตุ
+## 🔧 คำสั่งเบื้องต้น
 
-- **Cold Start:** Render Free Tier จะ sleep หลัง 15 นาที - การเรียกครั้งแรกอาจใช้เวลา 30-60 วินาที
-- วิดีโอยาวอาจใช้เวลาดาวน์โหลดนาน
+| คำสั่ง | รายละเอียด |
+|--------|------------|
+| `pip install -r requirements.txt` | ติดตั้ง dependencies |
+| `python app.py` | รัน server |
+| `curl http://localhost:5000/api/health` | ตรวจสอบ server |
 
-## 📁 โครงสร้าง
-
-```
-├── extension/          # Chrome Extension
-│   ├── manifest.json
-│   ├── popup.html
-│   ├── popup.css
-│   └── popup.js        # ⚠️ ต้องแก้ API_BASE_URL
-└── server/             # Python Backend  
-    ├── app.py
-    ├── requirements.txt
-    └── render.yaml
-```
+---
 
 ## 📜 License
 
-MIT License
+MIT License © 2024 Tatarus
