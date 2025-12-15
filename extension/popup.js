@@ -1,10 +1,12 @@
 /**
  * Tatarus YouTube Downloader - Popup Script
  * Handles UI interactions and communication with backend server
+ * Server auto-shutdowns after 10 minutes of inactivity
  */
 
 // Configuration
 const API_BASE_URL = 'http://localhost:5000/api';
+const SERVER_CHECK_TIMEOUT = 3000; // 3 seconds
 
 // DOM Elements
 const elements = {
@@ -41,23 +43,94 @@ document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
   setupEventListeners();
-  await loadVideoInfo();
+  await checkServerAndLoad();
+}
+
+// Check if server is running, show instructions if not
+async function checkServerAndLoad() {
+  showLoading();
+
+  try {
+    // Check server health
+    const isServerRunning = await checkServerHealth();
+
+    if (!isServerRunning) {
+      showServerNotRunningError();
+      return;
+    }
+
+    // Server is running, load video info
+    await loadVideoInfo();
+
+  } catch (error) {
+    console.error('Init error:', error);
+    showServerNotRunningError();
+  }
+}
+
+// Check if server is running
+async function checkServerHealth() {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), SERVER_CHECK_TIMEOUT);
+
+    const response = await fetch(`${API_BASE_URL}/health`, {
+      method: 'GET',
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+    return response.ok;
+
+  } catch (error) {
+    return false;
+  }
+}
+
+// Show server not running error with instructions
+function showServerNotRunningError() {
+  const platform = navigator.platform.toLowerCase();
+  let command = '';
+
+  if (platform.includes('win')) {
+    command = 'cd server && python app.py';
+  } else {
+    command = 'cd server && python3 app.py';
+  }
+
+  const errorHtml = `
+    <div style="text-align: left; font-size: 12px;">
+      <div style="color: #ff6b6b; font-weight: bold; margin-bottom: 8px;">
+        🔴 Backend Server ไม่ได้รัน!
+      </div>
+      <div style="color: #888; margin-bottom: 12px;">
+        กรุณารันคำสั่งนี้ใน Terminal:
+      </div>
+      <div style="background: #1a1a1a; padding: 10px; border-radius: 6px; font-family: monospace; margin-bottom: 12px; word-break: break-all;">
+        ${command}
+      </div>
+      <div style="color: #666; font-size: 11px;">
+        💡 Server จะปิดอัตโนมัติหลังไม่ได้ใช้งาน 10 นาที
+      </div>
+    </div>
+  `;
+
+  elements.loading.classList.add('hidden');
+  elements.content.classList.add('hidden');
+  elements.error.classList.remove('hidden');
+  elements.errorMessage.innerHTML = errorHtml;
 }
 
 // Event Listeners
 function setupEventListeners() {
-  // Format change
   elements.formatRadios.forEach(radio => {
     radio.addEventListener('change', handleFormatChange);
   });
 
-  // Download button
   elements.downloadBtn.addEventListener('click', handleDownload);
 
-  // Retry button
   elements.retryBtn.addEventListener('click', () => {
-    hideError();
-    loadVideoInfo();
+    checkServerAndLoad();
   });
 }
 
@@ -86,8 +159,6 @@ function isValidYouTubeUrl(url) {
 
 // Load video information
 async function loadVideoInfo() {
-  showLoading();
-
   try {
     const url = await getCurrentTabUrl();
 
@@ -95,21 +166,8 @@ async function loadVideoInfo() {
       throw new Error('กรุณาเปิดหน้าวิดีโอ YouTube แล้วลองใหม่อีกครั้ง');
     }
 
-    // First check if server is running
-    try {
-      const healthCheck = await fetch(`${API_BASE_URL}/health`, {
-        method: 'GET',
-        signal: AbortSignal.timeout(3000)
-      });
-      if (!healthCheck.ok) {
-        throw new Error('Server health check failed');
-      }
-    } catch (healthError) {
-      throw new Error('🔴 Backend Server ไม่ได้รัน!\n\nกรุณารันคำสั่ง:\ncd server && python3 server.py');
-    }
-
     const response = await fetch(`${API_BASE_URL}/info?url=${encodeURIComponent(url)}`, {
-      signal: AbortSignal.timeout(30000) // 30 second timeout
+      signal: AbortSignal.timeout(30000)
     });
 
     if (!response.ok) {
@@ -119,29 +177,23 @@ async function loadVideoInfo() {
 
     const data = await response.json();
 
-    // Check if there was an error in the response
     if (data.error) {
       throw new Error(data.error);
     }
 
     currentVideoInfo = data;
-
     displayVideoInfo(data);
     populateQualityOptions(data);
     showContent();
 
   } catch (error) {
     console.error('Error loading video info:', error);
-    let errorMessage = error.message;
 
-    // Handle network errors
-    if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
-      errorMessage = '🔴 ไม่สามารถเชื่อมต่อ Server ได้\n\nกรุณารันคำสั่ง:\ncd server && python3 server.py';
-    } else if (error.name === 'TimeoutError') {
-      errorMessage = '⏱️ หมดเวลารอการตอบกลับจาก Server';
+    if (error.name === 'TimeoutError') {
+      showError('⏱️ หมดเวลารอการตอบกลับจาก Server');
+    } else {
+      showError(error.message);
     }
-
-    showError(errorMessage);
   }
 }
 
@@ -154,7 +206,7 @@ function displayVideoInfo(info) {
   elements.duration.textContent = formatDuration(info.duration || 0);
 }
 
-// Format duration (seconds to MM:SS or HH:MM:SS)
+// Format duration
 function formatDuration(seconds) {
   const hrs = Math.floor(seconds / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
@@ -184,20 +236,14 @@ function populateQualityOptions(info) {
     const option = document.createElement('option');
     option.value = quality.format_id;
     option.textContent = quality.label;
-
-    // Select best quality by default (first item)
-    if (index === 0) {
-      option.selected = true;
-    }
-
+    if (index === 0) option.selected = true;
     elements.qualitySelect.appendChild(option);
   });
 }
 
-// Handle format change (MP4/MP3)
+// Handle format change
 function handleFormatChange(event) {
   currentFormat = event.target.value;
-
   if (currentVideoInfo) {
     populateQualityOptions(currentVideoInfo);
   }
@@ -208,7 +254,6 @@ async function handleDownload() {
   if (isDownloading || !currentVideoInfo) return;
 
   const selectedQuality = elements.qualitySelect.value;
-
   if (!selectedQuality) {
     showStatus('กรุณาเลือกคุณภาพก่อนดาวน์โหลด', 'warning');
     return;
@@ -223,9 +268,7 @@ async function handleDownload() {
 
     const response = await fetch(`${API_BASE_URL}/download`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         url: url,
         format: currentFormat,
@@ -238,14 +281,10 @@ async function handleDownload() {
       throw new Error(errorData.error || 'ดาวน์โหลดไม่สำเร็จ');
     }
 
-    // Poll for progress
     const data = await response.json();
 
     if (data.task_id) {
       await pollDownloadProgress(data.task_id);
-    } else if (data.success) {
-      setProgress(100);
-      showStatus(`ดาวน์โหลดสำเร็จ! บันทึกไว้ที่: ${data.filename}`, 'success');
     }
 
   } catch (error) {
@@ -260,8 +299,7 @@ async function handleDownload() {
 
 // Poll download progress
 async function pollDownloadProgress(taskId) {
-  const pollInterval = 500; // ms
-  const maxAttempts = 600; // 5 minutes max
+  const maxAttempts = 600;
   let attempts = 0;
 
   while (attempts < maxAttempts) {
@@ -275,7 +313,7 @@ async function pollDownloadProgress(taskId) {
 
       if (data.status === 'completed') {
         setProgress(100);
-        showStatus(`ดาวน์โหลดสำเร็จ! บันทึกไว้ที่: ${data.filename || 'Downloads folder'}`, 'success');
+        showStatus(`✅ ดาวน์โหลดสำเร็จ! ไฟล์: ${data.filename || 'Downloads'}`, 'success');
         return;
       }
 
@@ -283,7 +321,7 @@ async function pollDownloadProgress(taskId) {
         throw new Error(data.error || 'ดาวน์โหลดไม่สำเร็จ');
       }
 
-      await sleep(pollInterval);
+      await sleep(500);
       attempts++;
 
     } catch (error) {
@@ -294,7 +332,6 @@ async function pollDownloadProgress(taskId) {
   throw new Error('หมดเวลาดาวน์โหลด');
 }
 
-// Utility: Sleep
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -311,10 +348,6 @@ function showError(message) {
   elements.error.classList.remove('hidden');
   elements.content.classList.add('hidden');
   elements.errorMessage.textContent = message;
-}
-
-function hideError() {
-  elements.error.classList.add('hidden');
 }
 
 function showContent() {
@@ -342,7 +375,6 @@ function showStatus(message, type = 'success') {
   elements.statusContainer.classList.add(type);
   elements.statusMessage.textContent = message;
 
-  // Auto hide after 5 seconds
   setTimeout(() => {
     elements.statusContainer.classList.add('hidden');
   }, 5000);

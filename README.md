@@ -13,72 +13,100 @@
 
 ---
 
-## 📖 เกี่ยวกับโปรเจค
+## � การติดตั้ง
 
-**Tatarus YT Downloader** เป็น Chrome Extension ที่ช่วยให้คุณดาวน์โหลดวิดีโอและเพลงจาก YouTube ได้อย่างง่ายดาย โดยใช้ `yt-dlp` เป็น backend สำหรับประมวลผล
+### ความต้องการ
 
-### ✨ Features
+- **Python 3.8+** - [ดาวน์โหลด](https://python.org)
+- **Chrome Browser**
+- **FFmpeg** (สำหรับแปลง MP3) - [ดาวน์โหลด](https://ffmpeg.org)
 
-| Feature | Description |
-|---------|-------------|
-| 🎬 **วิดีโอ MP4** | ดาวน์โหลดวิดีโอคุณภาพ 360p - 4K |
-| 🎵 **เสียง MP3** | ดาวน์โหลดเพลงคุณภาพสูงถึง 320kbps |
-| 📊 **Dynamic Quality** | แสดงคุณภาพที่มีจริงของแต่ละวิดีโอ |
-| 🎨 **Dark UI** | หน้าตาสวยงาม ทันสมัย |
-| ⚡ **Progress Bar** | ติดตามความคืบหน้าแบบ Real-time |
+### ขั้นตอนที่ 1: ติดตั้ง Dependencies
 
----
-
-## � โครงสร้างโปรเจค
-
-```
-tatarus-ytdownloader-extension/
-├── extension/           # Chrome Extension
-│   ├── manifest.json    # Extension configuration
-│   ├── popup.html       # UI หลัก
-│   ├── popup.css        # Styles
-│   ├── popup.js         # Logic
-│   └── icons/           # Extension icons
-└── server/              # Python Backend
-    ├── app.py           # Flask API server
-    ├── requirements.txt # Python dependencies
-    └── render.yaml      # Deployment config
+**Windows:**
+```batch
+ดับเบิ้ลคลิก installer\install-windows.bat
 ```
 
----
+**Mac/Linux:**
+```bash
+chmod +x installer/install-mac-linux.sh
+./installer/install-mac-linux.sh
+```
 
-## 🚀 วิธีใช้งาน
-
-### 1. ติดตั้ง Dependencies
-
+**หรือติดตั้งเอง:**
 ```bash
 cd server
 pip install -r requirements.txt
 ```
 
-### 2. รัน Backend Server
+### ขั้นตอนที่ 2: ติดตั้ง Extension
 
-```bash
+1. เปิด Chrome → `chrome://extensions/`
+2. เปิด **Developer mode** (มุมขวาบน)
+3. คลิก **Load unpacked**
+4. เลือกโฟลเดอร์ `extension`
+
+---
+
+## 📖 วิธีใช้งาน
+
+### 1. รัน Server
+
+**Windows:**
+```batch
 cd server
 python app.py
 ```
 
-Server จะรันที่ `http://localhost:5000`
+**Mac/Linux:**
+```bash
+cd server
+python3 app.py
+```
 
-### 3. ติดตั้ง Extension
+> 💡 **Server จะปิดอัตโนมัติหลังไม่ได้ใช้งาน 10 นาที** เพื่อประหยัดทรัพยากร
 
-1. เปิด `chrome://extensions/`
-2. เปิด **Developer mode**
-3. คลิก **Load unpacked**
-4. เลือกโฟลเดอร์ `extension`
+### 2. ดาวน์โหลดวิดีโอ
 
-### 4. ดาวน์โหลดวิดีโอ
+1. 🌐 เปิดวิดีโอ YouTube
+2. 🖱️ คลิกไอคอน Extension
+3. 🎯 เลือก **MP4** (วิดีโอ) หรือ **MP3** (เสียง)
+4. 📊 เลือกคุณภาพ
+5. ⬇️ กด **ดาวน์โหลด**
 
-1. เปิดวิดีโอ YouTube
-2. คลิกไอคอน Extension
-3. เลือก MP4 หรือ MP3
-4. เลือกคุณภาพ
-5. กด **ดาวน์โหลด**
+ไฟล์จะถูกบันทึกที่โฟลเดอร์ **Downloads**
+
+---
+
+## ✨ Features
+
+| Feature | รายละเอียด |
+|---------|------------|
+| 🎬 **MP4** | ดาวน์โหลดวิดีโอ 360p - 4K |
+| 🎵 **MP3** | ดาวน์โหลดเสียงคุณภาพสูง 320kbps |
+| 📊 **Dynamic Quality** | แสดงคุณภาพที่มีจริง |
+| ⚡ **Progress Bar** | ดูความคืบหน้าแบบ Real-time |
+| ⏰ **Auto-shutdown** | ปิด Server อัตโนมัติ (10 นาที) |
+
+---
+
+## 📁 โครงสร้างโปรเจค
+
+```
+tatarus-ytdownloader-extension/
+├── extension/           # Chrome Extension
+│   ├── manifest.json
+│   ├── popup.html
+│   ├── popup.css
+│   └── popup.js
+├── server/              # Python Backend
+│   ├── app.py           # Flask API + Auto-shutdown
+│   └── requirements.txt
+└── installer/           # Installation Scripts
+    ├── install-windows.bat
+    └── install-mac-linux.sh
+```
 
 ---
 
@@ -88,7 +116,17 @@ Server จะรันที่ `http://localhost:5000`
 |--------|------------|
 | `pip install -r requirements.txt` | ติดตั้ง dependencies |
 | `python app.py` | รัน server |
-| `curl http://localhost:5000/api/health` | ตรวจสอบ server |
+| `curl localhost:5000/api/health` | ตรวจสอบ server |
+
+---
+
+## ⚠️ แก้ไขปัญหา
+
+| ปัญหา | วิธีแก้ |
+|-------|--------|
+| Server ไม่รัน | ตรวจสอบว่าติดตั้ง Python แล้ว |
+| ดาวน์โหลด MP3 ไม่ได้ | ติดตั้ง FFmpeg |
+| Extension ไม่เห็น Server | รัน `python app.py` ก่อน |
 
 ---
 
