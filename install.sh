@@ -2,7 +2,7 @@
 
 # ============================================================
 # Tatarus YT Downloader - One-Time Installer
-# Installs server as a startup service (runs once)
+# Auto-installs Python if not found
 # ============================================================
 
 echo ""
@@ -11,15 +11,53 @@ echo "║     Tatarus YT Downloader - Installer                     ║"
 echo "╚═══════════════════════════════════════════════════════════╝"
 echo ""
 
-# Get script directory (where project is located)
+# Get script directory
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SERVER_SCRIPT="$SCRIPT_DIR/server/app.py"
 
-# Check if Python is installed
+# Function to install Python
+install_python() {
+    echo "📦 Installing Python3..."
+    
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS - Use Homebrew
+        if ! command -v brew &> /dev/null; then
+            echo "📦 Installing Homebrew first..."
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        fi
+        brew install python3
+    else
+        # Linux - Detect package manager
+        if command -v apt-get &> /dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y python3 python3-pip
+        elif command -v dnf &> /dev/null; then
+            sudo dnf install -y python3 python3-pip
+        elif command -v yum &> /dev/null; then
+            sudo yum install -y python3 python3-pip
+        elif command -v pacman &> /dev/null; then
+            sudo pacman -S --noconfirm python python-pip
+        else
+            echo "❌ Could not detect package manager!"
+            echo "   Please install Python3 manually: https://python.org"
+            exit 1
+        fi
+    fi
+    
+    echo "✅ Python3 installed successfully!"
+}
+
+# Check Python - auto-install if not found
 if ! command -v python3 &> /dev/null; then
-    echo "❌ Python3 not found!"
-    echo "   Install: brew install python3 (Mac) or apt install python3 (Linux)"
-    exit 1
+    echo "⚠️  Python3 not found!"
+    read -p "   Install Python3 automatically? (y/n): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        install_python
+    else
+        echo "❌ Python3 is required. Exiting."
+        exit 1
+    fi
 fi
 
 echo "✅ Python3 found: $(python3 --version)"
@@ -31,9 +69,8 @@ cd "$SCRIPT_DIR/server"
 pip3 install -r requirements.txt -q
 echo "✅ Dependencies installed"
 
-# Detect OS
+# Detect OS and install service
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    # macOS - Use launchd
     echo ""
     echo "🍎 macOS detected - Installing LaunchAgent..."
     
@@ -66,17 +103,14 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
 </plist>
 EOF
     
-    # Load the service
     launchctl unload "$PLIST_FILE" 2>/dev/null
     launchctl load "$PLIST_FILE"
     
-    echo "✅ LaunchAgent installed: $PLIST_FILE"
-    echo "✅ Server will start automatically on login"
+    echo "✅ LaunchAgent installed"
     
 else
-    # Linux - Use systemd user service
     echo ""
-    echo "🐧 Linux detected - Installing systemd user service..."
+    echo "🐧 Linux detected - Installing systemd service..."
     
     SERVICE_DIR="$HOME/.config/systemd/user"
     SERVICE_FILE="$SERVICE_DIR/tatarus-server.service"
@@ -99,13 +133,11 @@ Environment=PYTHONUNBUFFERED=1
 WantedBy=default.target
 EOF
     
-    # Reload and enable the service
     systemctl --user daemon-reload
     systemctl --user enable tatarus-server.service
     systemctl --user start tatarus-server.service
     
-    echo "✅ Systemd service installed: $SERVICE_FILE"
-    echo "✅ Server will start automatically on login"
+    echo "✅ Systemd service installed"
 fi
 
 echo ""
@@ -115,15 +147,5 @@ echo "╠═══════════════════════�
 echo "║  • Server starts automatically with your computer         ║"
 echo "║  • Server starts in SLEEP mode (low resources)            ║"
 echo "║  • Extension wakes it up when needed                      ║"
-echo "║  • Auto-sleeps after 10 min of inactivity                 ║"
 echo "╚═══════════════════════════════════════════════════════════╝"
-echo ""
-echo "📝 To uninstall:"
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    echo "   launchctl unload ~/Library/LaunchAgents/com.tatarus.ytdownloader.plist"
-    echo "   rm ~/Library/LaunchAgents/com.tatarus.ytdownloader.plist"
-else
-    echo "   systemctl --user disable tatarus-server.service"
-    echo "   rm ~/.config/systemd/user/tatarus-server.service"
-fi
 echo ""

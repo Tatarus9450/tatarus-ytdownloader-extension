@@ -85,4 +85,4 @@ Files saved to **Downloads** folder | ไฟล์บันทึกที่โ
 
 ---
 
-MIT License © 2024 Tatarus
+MIT License © 2025 Tatarus
