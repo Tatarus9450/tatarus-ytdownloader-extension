@@ -24,7 +24,7 @@ class ServerState:
 
 server_state = ServerState.SLEEPING
 last_activity_time = time.time()
-IDLE_TIMEOUT = 600  # 10 minutes
+IDLE_TIMEOUT = 180  #3 minutes
 
 # Download folder
 DOWNLOAD_FOLDER = os.path.join(os.path.expanduser('~'), 'Downloads')
