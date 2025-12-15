@@ -16,7 +16,7 @@
 ## 🚀 Installation | การติดตั้ง
 
 ### Requirements | ความต้องการ
-#### (install.bat or install.sh Can install Python and FFmpeg Automatically - Maybe ask you to instal [y/n])
+#### (install.bat or install.sh Can install Python and FFmpeg Automatically - Maybe ask you to install [y/n])
 - Python 3.8+ ([Download](https://python.org))
 - Chrome Browser
 - FFmpeg ([Download](https://ffmpeg.org)) - for MP3 | สำหรับ MP3
