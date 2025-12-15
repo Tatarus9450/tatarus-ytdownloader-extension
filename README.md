@@ -1,135 +1,88 @@
 # 🎬 Tatarus YT Downloader
 
 <div align="center">
-  <img src="extension/icons/icon-128.png" alt="Tatarus YT Downloader" width="128">
+  <img src="icons/icon-128.png" alt="Tatarus YT Downloader" width="100">
   <br><br>
+  <strong>Chrome Extension for downloading YouTube videos and audio</strong><br>
   <strong>Chrome Extension สำหรับดาวน์โหลดวิดีโอและเพลงจาก YouTube</strong>
   <br><br>
   
   [![License: MIT](https://img.shields.io/badge/License-MIT-red.svg)](LICENSE)
   [![Python 3.8+](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
-  [![yt-dlp](https://img.shields.io/badge/Powered%20by-yt--dlp-green.svg)](https://github.com/yt-dlp/yt-dlp)
 </div>
 
 ---
 
-## � การติดตั้ง
+## 🚀 Installation | การติดตั้ง
 
-### ความต้องการ
+### Requirements | ความต้องการ
+- Python 3.8+ ([Download](https://python.org))
+- Chrome Browser
+- FFmpeg ([Download](https://ffmpeg.org)) - for MP3 | สำหรับ MP3
 
-- **Python 3.8+** - [ดาวน์โหลด](https://python.org)
-- **Chrome Browser**
-- **FFmpeg** (สำหรับแปลง MP3) - [ดาวน์โหลด](https://ffmpeg.org)
+### Step 1: Load Extension | โหลด Extension
+1. Open `chrome://extensions/` | เปิด `chrome://extensions/`
+2. Enable **Developer mode** | เปิด **Developer mode**
+3. **Load unpacked** → Select this folder | เลือกโฟลเดอร์นี้
 
-### ขั้นตอนที่ 1: ติดตั้ง Dependencies
+### Step 2: Install Server (One-Time) | ติดตั้ง Server (ครั้งเดียว)
 
-**Windows:**
-```batch
-ดับเบิ้ลคลิก installer\install-windows.bat
-```
+| Platform | Command |
+|----------|---------|
+| **Windows** | Double-click `install.bat` |
+| **Mac/Linux** | `./install.sh` |
 
-**Mac/Linux:**
-```bash
-chmod +x installer/install-mac-linux.sh
-./installer/install-mac-linux.sh
-```
-
-**หรือติดตั้งเอง:**
-```bash
-cd server
-pip install -r requirements.txt
-```
-
-### ขั้นตอนที่ 2: ติดตั้ง Extension
-
-1. เปิด Chrome → `chrome://extensions/`
-2. เปิด **Developer mode** (มุมขวาบน)
-3. คลิก **Load unpacked**
-4. เลือกโฟลเดอร์ `extension`
+**After installation | หลังติดตั้ง:**
+- ✅ Server starts automatically with PC | เริ่มอัตโนมัติเมื่อเปิด PC
+- 💤 Starts in **Sleep mode** | เริ่มใน Sleep mode (ใช้ทรัพยากรน้อย)
+- ⚡ Wakes when Extension opens | ตื่นเมื่อเปิด Extension
+- ⏰ Auto-sleeps after 10 min idle | หลับหลังไม่ใช้ 10 นาที
 
 ---
 
-## 📖 วิธีใช้งาน
+## 📖 How to Use | วิธีใช้
 
-### 1. รัน Server
+1. 🌐 Open YouTube video | เปิดวิดีโอ YouTube
+2. 🖱️ Click Extension icon | คลิกไอคอน Extension
+3. 🎯 Select **MP4** or **MP3** | เลือก MP4 หรือ MP3
+4. 📊 Choose quality | เลือกคุณภาพ
+5. ⬇️ Click **Download** | กด Download
 
-**Windows:**
-```batch
-cd server
-python app.py
-```
-
-**Mac/Linux:**
-```bash
-cd server
-python3 app.py
-```
-
-> 💡 **Server จะปิดอัตโนมัติหลังไม่ได้ใช้งาน 10 นาที** เพื่อประหยัดทรัพยากร
-
-### 2. ดาวน์โหลดวิดีโอ
-
-1. 🌐 เปิดวิดีโอ YouTube
-2. 🖱️ คลิกไอคอน Extension
-3. 🎯 เลือก **MP4** (วิดีโอ) หรือ **MP3** (เสียง)
-4. 📊 เลือกคุณภาพ
-5. ⬇️ กด **ดาวน์โหลด**
-
-ไฟล์จะถูกบันทึกที่โฟลเดอร์ **Downloads**
+Files saved to **Downloads** folder | ไฟล์บันทึกที่โฟลเดอร์ Downloads
 
 ---
 
-## ✨ Features
+## ✨ Features | คุณสมบัติ
 
-| Feature | รายละเอียด |
-|---------|------------|
-| 🎬 **MP4** | ดาวน์โหลดวิดีโอ 360p - 4K |
-| 🎵 **MP3** | ดาวน์โหลดเสียงคุณภาพสูง 320kbps |
-| 📊 **Dynamic Quality** | แสดงคุณภาพที่มีจริง |
-| ⚡ **Progress Bar** | ดูความคืบหน้าแบบ Real-time |
-| ⏰ **Auto-shutdown** | ปิด Server อัตโนมัติ (10 นาที) |
+| Feature | Description |
+|---------|-------------|
+| 🎬 MP4 | Video 360p - 4K |
+| 🎵 MP3 | Audio 320kbps |
+| 💤 Sleep/Wake | Low resources when idle | ใช้ทรัพยากรน้อยเมื่อไม่ใช้ |
+| ⏰ Auto-startup | Runs with PC | รันอัตโนมัติ |
 
 ---
 
-## 📁 โครงสร้างโปรเจค
+## 📁 Project Structure | โครงสร้าง
 
 ```
-tatarus-ytdownloader-extension/
-├── extension/           # Chrome Extension
-│   ├── manifest.json
-│   ├── popup.html
-│   ├── popup.css
-│   └── popup.js
-├── server/              # Python Backend
-│   ├── app.py           # Flask API + Auto-shutdown
-│   └── requirements.txt
-└── installer/           # Installation Scripts
-    ├── install-windows.bat
-    └── install-mac-linux.sh
+├── manifest.json, popup.html/css/js
+├── icons/
+├── server/app.py
+├── install.bat / install.sh   ← Installer (once) | ติดตั้ง (ครั้งเดียว)
+└── start-server.sh            ← Manual start | รันเอง (optional)
 ```
 
 ---
 
-## 🔧 คำสั่งเบื้องต้น
+## 🗑️ Uninstall | ถอนการติดตั้ง
 
-| คำสั่ง | รายละเอียด |
-|--------|------------|
-| `pip install -r requirements.txt` | ติดตั้ง dependencies |
-| `python app.py` | รัน server |
-| `curl localhost:5000/api/health` | ตรวจสอบ server |
+**Windows:** Delete | ลบ `%APPDATA%\...\Startup\Tatarus-Server.bat`
 
----
+**Mac:** `launchctl unload ~/Library/LaunchAgents/com.tatarus.ytdownloader.plist`
 
-## ⚠️ แก้ไขปัญหา
-
-| ปัญหา | วิธีแก้ |
-|-------|--------|
-| Server ไม่รัน | ตรวจสอบว่าติดตั้ง Python แล้ว |
-| ดาวน์โหลด MP3 ไม่ได้ | ติดตั้ง FFmpeg |
-| Extension ไม่เห็น Server | รัน `python app.py` ก่อน |
+**Linux:** `systemctl --user disable tatarus-server.service`
 
 ---
-
-## 📜 License
 
 MIT License © 2024 Tatarus

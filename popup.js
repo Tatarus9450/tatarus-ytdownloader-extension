@@ -1,12 +1,12 @@
 /**
  * Tatarus YouTube Downloader - Popup Script
  * Handles UI interactions and communication with backend server
- * Server auto-shutdowns after 10 minutes of inactivity
+ * Server has Sleep/Wake functionality - auto-wakes on first request
  */
 
 // Configuration
 const API_BASE_URL = 'http://localhost:5000/api';
-const SERVER_CHECK_TIMEOUT = 3000; // 3 seconds
+const SERVER_CHECK_TIMEOUT = 3000;
 
 // DOM Elements
 const elements = {
@@ -46,20 +46,25 @@ async function init() {
   await checkServerAndLoad();
 }
 
-// Check if server is running, show instructions if not
+// Wake up server if sleeping, then load video info
 async function checkServerAndLoad() {
   showLoading();
 
   try {
-    // Check server health
-    const isServerRunning = await checkServerHealth();
+    // First check if server is running
+    const serverStatus = await checkServerStatus();
 
-    if (!isServerRunning) {
+    if (!serverStatus.running) {
       showServerNotRunningError();
       return;
     }
 
-    // Server is running, load video info
+    // If server is sleeping, wake it up
+    if (serverStatus.state === 'sleeping') {
+      await wakeupServer();
+    }
+
+    // Now load video info
     await loadVideoInfo();
 
   } catch (error) {
@@ -68,52 +73,73 @@ async function checkServerAndLoad() {
   }
 }
 
-// Check if server is running
-async function checkServerHealth() {
+// Check server status
+async function checkServerStatus() {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), SERVER_CHECK_TIMEOUT);
 
-    const response = await fetch(`${API_BASE_URL}/health`, {
+    const response = await fetch(`${API_BASE_URL}/status`, {
       method: 'GET',
       signal: controller.signal
     });
 
     clearTimeout(timeoutId);
-    return response.ok;
+
+    if (response.ok) {
+      const data = await response.json();
+      return { running: true, state: data.state };
+    }
+    return { running: false, state: null };
 
   } catch (error) {
-    return false;
+    return { running: false, state: null };
+  }
+}
+
+// Wake up the server
+async function wakeupServer() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/wakeup`, { method: 'GET' });
+    if (response.ok) {
+      console.log('⚡ Server woken up!');
+    }
+  } catch (error) {
+    console.error('Failed to wake server:', error);
   }
 }
 
 // Show server not running error with instructions
 function showServerNotRunningError() {
-  const platform = navigator.platform.toLowerCase();
-  let command = '';
-
-  if (platform.includes('win')) {
-    command = 'cd server && python app.py';
-  } else {
-    command = 'cd server && python3 app.py';
-  }
+  const isWindows = navigator.platform.toLowerCase().includes('win');
+  const installer = isWindows ? 'install.bat' : './install.sh';
 
   const errorHtml = `
-    <div style="text-align: left; font-size: 12px;">
-      <div style="color: #ff6b6b; font-weight: bold; margin-bottom: 8px;">
-        🔴 Backend Server ไม่ได้รัน!
+    <div style="text-align: center; max-width: 260px; margin: 0 auto;">
+      <div style="color: #ff6b6b; font-weight: 600; font-size: 13px; margin-bottom: 8px;">
+        ⚠️ Server Not Running
       </div>
-      <div style="color: #888; margin-bottom: 12px;">
-        กรุณารันคำสั่งนี้ใน Terminal:
+      <div style="background: #1a2e1a; padding: 10px; border-radius: 6px; border: 1px solid #2d4a2d; text-align: left;">
+        <div style="color: #4ade80; font-size: 10px; font-weight: 600; margin-bottom: 6px; text-align: center;">
+          🚀 Run Installer (First time only)
+        </div>
+        <div style="color: #888; font-size: 10px; line-height: 1.4;">
+          <div style="margin-bottom: 2px;">1. Open project folder</div>
+          <div style="margin-bottom: 2px;">2. ${isWindows ? 'Double-click' : 'Run:'} <code style="color: #4ade80;">${installer}</code></div>
+          <div>3. Reload this extension</div>
+        </div>
       </div>
-      <div style="background: #1a1a1a; padding: 10px; border-radius: 6px; font-family: monospace; margin-bottom: 12px; word-break: break-all;">
-        ${command}
-      </div>
-      <div style="color: #666; font-size: 11px;">
-        💡 Server จะปิดอัตโนมัติหลังไม่ได้ใช้งาน 10 นาที
+      <div style="color: #444; font-size: 8px; margin-top: 5px;">
+        ✨ After install, server starts automatically
       </div>
     </div>
   `;
+
+  // Hide the default error icon and title
+  const errorIcon = document.querySelector('.error-icon');
+  const errorTitle = document.querySelector('.error-title');
+  if (errorIcon) errorIcon.style.display = 'none';
+  if (errorTitle) errorTitle.style.display = 'none';
 
   elements.loading.classList.add('hidden');
   elements.content.classList.add('hidden');
@@ -126,12 +152,8 @@ function setupEventListeners() {
   elements.formatRadios.forEach(radio => {
     radio.addEventListener('change', handleFormatChange);
   });
-
   elements.downloadBtn.addEventListener('click', handleDownload);
-
-  elements.retryBtn.addEventListener('click', () => {
-    checkServerAndLoad();
-  });
+  elements.retryBtn.addEventListener('click', () => checkServerAndLoad());
 }
 
 // Get current YouTube URL from active tab
@@ -141,7 +163,7 @@ async function getCurrentTabUrl() {
       if (tabs[0] && tabs[0].url) {
         resolve(tabs[0].url);
       } else {
-        reject(new Error('ไม่สามารถดึง URL ของแท็บปัจจุบันได้'));
+        reject(new Error('Cannot get URL from current tab'));
       }
     });
   });
@@ -163,7 +185,7 @@ async function loadVideoInfo() {
     const url = await getCurrentTabUrl();
 
     if (!isValidYouTubeUrl(url)) {
-      throw new Error('กรุณาเปิดหน้าวิดีโอ YouTube แล้วลองใหม่อีกครั้ง');
+      throw new Error('Please open a YouTube video and try again');
     }
 
     const response = await fetch(`${API_BASE_URL}/info?url=${encodeURIComponent(url)}`, {
@@ -172,7 +194,7 @@ async function loadVideoInfo() {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || 'ไม่สามารถดึงข้อมูลวิดีโอได้');
+      throw new Error(errorData.error || 'Failed to get video information');
     }
 
     const data = await response.json();
@@ -188,9 +210,8 @@ async function loadVideoInfo() {
 
   } catch (error) {
     console.error('Error loading video info:', error);
-
     if (error.name === 'TimeoutError') {
-      showError('⏱️ หมดเวลารอการตอบกลับจาก Server');
+      showError('⏱️ Server response timeout');
     } else {
       showError(error.message);
     }
@@ -201,8 +222,8 @@ async function loadVideoInfo() {
 function displayVideoInfo(info) {
   elements.thumbnail.src = info.thumbnail || '';
   elements.thumbnail.alt = info.title || 'Video Thumbnail';
-  elements.videoTitle.textContent = info.title || 'ไม่ทราบชื่อ';
-  elements.videoChannel.textContent = info.channel || 'ไม่ทราบช่อง';
+  elements.videoTitle.textContent = info.title || 'Unknown Title';
+  elements.videoChannel.textContent = info.channel || 'Unknown Channel';
   elements.duration.textContent = formatDuration(info.duration || 0);
 }
 
@@ -211,7 +232,6 @@ function formatDuration(seconds) {
   const hrs = Math.floor(seconds / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
   const secs = Math.floor(seconds % 60);
-
   if (hrs > 0) {
     return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
@@ -221,13 +241,12 @@ function formatDuration(seconds) {
 // Populate quality dropdown
 function populateQualityOptions(info) {
   elements.qualitySelect.innerHTML = '';
-
   const qualities = currentFormat === 'mp4' ? info.video_qualities : info.audio_qualities;
 
   if (!qualities || qualities.length === 0) {
     const option = document.createElement('option');
     option.value = '';
-    option.textContent = 'ไม่มีคุณภาพที่รองรับ';
+    option.textContent = 'No quality available';
     elements.qualitySelect.appendChild(option);
     return;
   }
@@ -255,7 +274,7 @@ async function handleDownload() {
 
   const selectedQuality = elements.qualitySelect.value;
   if (!selectedQuality) {
-    showStatus('กรุณาเลือกคุณภาพก่อนดาวน์โหลด', 'warning');
+    showStatus('Please select a quality first', 'warning');
     return;
   }
 
@@ -278,11 +297,10 @@ async function handleDownload() {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || 'ดาวน์โหลดไม่สำเร็จ');
+      throw new Error(errorData.error || 'Download failed');
     }
 
     const data = await response.json();
-
     if (data.task_id) {
       await pollDownloadProgress(data.task_id);
     }
@@ -313,12 +331,12 @@ async function pollDownloadProgress(taskId) {
 
       if (data.status === 'completed') {
         setProgress(100);
-        showStatus(`✅ ดาวน์โหลดสำเร็จ! ไฟล์: ${data.filename || 'Downloads'}`, 'success');
+        showStatus(`✅ Download complete! File: ${data.filename || 'Downloads'}`, 'success');
         return;
       }
 
       if (data.status === 'error') {
-        throw new Error(data.error || 'ดาวน์โหลดไม่สำเร็จ');
+        throw new Error(data.error || 'Download failed');
       }
 
       await sleep(500);
@@ -329,7 +347,7 @@ async function pollDownloadProgress(taskId) {
     }
   }
 
-  throw new Error('หมดเวลาดาวน์โหลด');
+  throw new Error('Download timeout');
 }
 
 function sleep(ms) {
@@ -374,8 +392,5 @@ function showStatus(message, type = 'success') {
   elements.statusContainer.classList.remove('hidden', 'success', 'error', 'warning');
   elements.statusContainer.classList.add(type);
   elements.statusMessage.textContent = message;
-
-  setTimeout(() => {
-    elements.statusContainer.classList.add('hidden');
-  }, 5000);
+  setTimeout(() => elements.statusContainer.classList.add('hidden'), 5000);
 }

@@ -276,6 +276,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
+  margin-top: var(--space-sm);
 }
 
 .section-title {
@@ -284,6 +285,7 @@ body {
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  margin-bottom: var(--space-xs);
 }
 
 .format-toggle {

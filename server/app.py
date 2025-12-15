@@ -1,7 +1,9 @@
 """
 Tatarus YT Downloader - Backend Server
-Flask API server using yt-dlp for video/audio downloading
-Auto-shutdown after 10 minutes of inactivity
+Flask API server with Sleep/Wake functionality
+- Starts in SLEEPING mode (minimal resources)
+- Wakes up on /api/wakeup call from extension
+- Auto-sleeps after 10 minutes of inactivity
 """
 
 import os
@@ -15,10 +17,14 @@ import yt_dlp
 app = Flask(__name__)
 CORS(app)
 
-# Auto-shutdown configuration
-IDLE_TIMEOUT = 600  # 10 minutes in seconds
+# Server State Management
+class ServerState:
+    SLEEPING = "sleeping"
+    AWAKE = "awake"
+
+server_state = ServerState.SLEEPING
 last_activity_time = time.time()
-shutdown_timer = None
+IDLE_TIMEOUT = 600  # 10 minutes
 
 # Download folder
 DOWNLOAD_FOLDER = os.path.join(os.path.expanduser('~'), 'Downloads')
@@ -34,47 +40,75 @@ def update_activity():
     last_activity_time = time.time()
 
 
-def check_idle_shutdown():
-    """Check if server should shutdown due to inactivity"""
-    global shutdown_timer
+def check_idle_and_sleep():
+    """Background thread to check idle time and put server to sleep"""
+    global server_state
     while True:
         time.sleep(60)  # Check every minute
-        idle_time = time.time() - last_activity_time
-        if idle_time >= IDLE_TIMEOUT:
-            print(f"\n⏰ Server idle for {IDLE_TIMEOUT//60} minutes. Shutting down...")
-            os._exit(0)
+        if server_state == ServerState.AWAKE:
+            idle_time = time.time() - last_activity_time
+            if idle_time >= IDLE_TIMEOUT:
+                server_state = ServerState.SLEEPING
+                print(f"\n💤 Server going to SLEEP after {IDLE_TIMEOUT//60} min idle...")
 
 
-def get_quality_label(height):
-    labels = {
-        2160: '4K (2160p)',
-        1440: '2K (1440p)',
-        1080: 'Full HD (1080p)',
-        720: 'HD (720p)',
-        480: 'SD (480p)',
-        360: 'Low (360p)',
-    }
-    return labels.get(height, f'{height}p')
+def require_awake(f):
+    """Decorator to require AWAKE state for endpoints"""
+    def wrapper(*args, **kwargs):
+        if server_state == ServerState.SLEEPING:
+            return jsonify({
+                'error': 'Server is sleeping',
+                'state': server_state,
+                'message': 'Call /api/wakeup first'
+            }), 503
+        return f(*args, **kwargs)
+    wrapper.__name__ = f.__name__
+    return wrapper
 
 
-def get_audio_quality_label(abr):
-    labels = {
-        320: '320 kbps (Best)',
-        256: '256 kbps',
-        192: '192 kbps',
-        128: '128 kbps',
-    }
-    return labels.get(int(abr) if abr else 128, f'{int(abr)} kbps')
+# =============================================================================
+# Core Endpoints
+# =============================================================================
+
+@app.route('/api/status', methods=['GET'])
+def get_status():
+    """Get server status - always available"""
+    return jsonify({
+        'state': server_state,
+        'idle_timeout': IDLE_TIMEOUT
+    })
+
+
+@app.route('/api/wakeup', methods=['GET', 'POST'])
+def wakeup():
+    """Wake up the server - always available"""
+    global server_state
+    server_state = ServerState.AWAKE
+    update_activity()
+    print("⚡ Server AWAKE!")
+    return jsonify({
+        'state': server_state,
+        'message': 'Server is now awake'
+    })
 
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
-    update_activity()
-    return jsonify({'status': 'ok', 'idle_timeout': IDLE_TIMEOUT})
+    """Health check - always available"""
+    return jsonify({
+        'status': 'ok',
+        'state': server_state
+    })
 
+
+# =============================================================================
+# Protected Endpoints (require AWAKE state)
+# =============================================================================
 
 @app.route('/api/info', methods=['GET'])
+@require_awake
 def get_video_info():
+    """Get video information - requires AWAKE"""
     update_activity()
     url = request.args.get('url')
     
@@ -135,7 +169,9 @@ def get_video_info():
 
 
 @app.route('/api/download', methods=['POST'])
+@require_awake
 def download_video():
+    """Start download - requires AWAKE"""
     update_activity()
     data = request.get_json()
     
@@ -157,6 +193,31 @@ def download_video():
     thread.start()
     
     return jsonify({'success': True, 'task_id': task_id})
+
+
+@app.route('/api/progress/<task_id>', methods=['GET'])
+@require_awake
+def get_progress(task_id):
+    """Get download progress - requires AWAKE"""
+    update_activity()
+    if task_id not in download_tasks:
+        return jsonify({'error': 'Task not found'}), 404
+    return jsonify(download_tasks[task_id])
+
+
+# =============================================================================
+# Helper Functions
+# =============================================================================
+
+def get_quality_label(height):
+    labels = {2160: '4K (2160p)', 1440: '2K (1440p)', 1080: 'Full HD (1080p)',
+              720: 'HD (720p)', 480: 'SD (480p)', 360: 'Low (360p)'}
+    return labels.get(height, f'{height}p')
+
+
+def get_audio_quality_label(abr):
+    labels = {320: '320 kbps (Best)', 256: '256 kbps', 192: '192 kbps', 128: '128 kbps'}
+    return labels.get(int(abr) if abr else 128, f'{int(abr)} kbps')
 
 
 def progress_hook(task_id):
@@ -208,17 +269,13 @@ def download_worker(task_id, url, format_type, quality):
         download_tasks[task_id]['error'] = str(e)
 
 
-@app.route('/api/progress/<task_id>', methods=['GET'])
-def get_progress(task_id):
-    update_activity()
-    if task_id not in download_tasks:
-        return jsonify({'error': 'Task not found'}), 404
-    return jsonify(download_tasks[task_id])
-
+# =============================================================================
+# Main
+# =============================================================================
 
 if __name__ == '__main__':
     # Start idle checker thread
-    idle_thread = threading.Thread(target=check_idle_shutdown, daemon=True)
+    idle_thread = threading.Thread(target=check_idle_and_sleep, daemon=True)
     idle_thread.start()
     
     print(f"""
@@ -227,8 +284,9 @@ if __name__ == '__main__':
 ╠═══════════════════════════════════════════════════════════╣
 ║  🌐 Server: http://127.0.0.1:5000                         ║
 ║  📁 Downloads: ~/Downloads                                ║
-║  ⏰ Auto-shutdown: {IDLE_TIMEOUT//60} minutes of inactivity              ║
+║  💤 State: SLEEPING (waiting for wakeup signal)           ║
+║  ⏰ Auto-sleep: {IDLE_TIMEOUT//60} min of inactivity                     ║
 ╚═══════════════════════════════════════════════════════════╝
     """)
     
-    app.run(host='127.0.0.1', port=5000, debug=False)
+    app.run(host='127.0.0.1', port=5000, debug=False, threaded=True)

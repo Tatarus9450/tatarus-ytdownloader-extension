@@ -44,15 +44,15 @@
     <!-- Loading State -->
     <div id="loading" class="loading-container">
       <div class="loading-spinner"></div>
-      <p class="loading-text">กำลังโหลดข้อมูลวิดีโอ...</p>
+      <p class="loading-text">Loading video info...</p>
     </div>
 
     <!-- Error State -->
     <div id="error" class="error-container hidden">
       <div class="error-icon">⚠️</div>
-      <p class="error-title">ไม่พบวิดีโอ</p>
-      <pre class="error-message" id="error-message">กรุณาเปิดหน้า YouTube video แล้วลองใหม่อีกครั้ง</pre>
-      <button class="btn btn-secondary" id="retry-btn">ลองใหม่</button>
+      <p class="error-title">Video Not Found</p>
+      <pre class="error-message" id="error-message">Please open a YouTube video and try again</pre>
+      <button class="btn btn-secondary" id="retry-btn">Retry</button>
     </div>
 
     <!-- Main Content -->
@@ -64,14 +64,14 @@
           <span class="duration" id="duration">0:00</span>
         </div>
         <div class="video-info">
-          <h2 class="video-title" id="video-title">กำลังโหลด...</h2>
+          <h2 class="video-title" id="video-title">Loading...</h2>
           <p class="video-channel" id="video-channel">Channel Name</p>
         </div>
       </div>
 
       <!-- Format Selection -->
       <div class="format-section">
-        <h3 class="section-title">เลือกรูปแบบไฟล์</h3>
+        <h3 class="section-title">Select Format</h3>
         <div class="format-toggle">
           <label class="format-option">
             <input type="radio" name="format" value="mp4" checked>
@@ -81,7 +81,7 @@
                 <path d="M10 9L15 12L10 15V9Z" fill="currentColor" />
               </svg>
               <span>MP4</span>
-              <span class="format-desc">วิดีโอ</span>
+              <span class="format-desc">Video</span>
             </span>
           </label>
           <label class="format-option">
@@ -94,7 +94,7 @@
                 <circle cx="18" cy="16" r="3" stroke="currentColor" stroke-width="2" />
               </svg>
               <span>MP3</span>
-              <span class="format-desc">เสียง</span>
+              <span class="format-desc">Audio</span>
             </span>
           </label>
         </div>
@@ -102,10 +102,10 @@
 
       <!-- Quality Selection -->
       <div class="quality-section">
-        <h3 class="section-title">เลือกคุณภาพ</h3>
+        <h3 class="section-title">Select Quality</h3>
         <div class="select-wrapper">
           <select id="quality-select" class="quality-select">
-            <option value="">กำลังโหลด...</option>
+            <option value="">Loading...</option>
           </select>
           <svg class="select-arrow" viewBox="0 0 24 24" fill="none">
             <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -123,13 +123,13 @@
             stroke-linejoin="round" />
           <path d="M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
-        <span>ดาวน์โหลด</span>
+        <span>Download</span>
       </button>
 
       <!-- Download Progress -->
       <div id="progress-container" class="progress-container hidden">
         <div class="progress-info">
-          <span class="progress-label">กำลังดาวน์โหลด...</span>
+          <span class="progress-label">Downloading...</span>
           <span class="progress-percent" id="progress-percent">0%</span>
         </div>
         <div class="progress-bar">
@@ -140,7 +140,7 @@
 
     <!-- Footer -->
     <footer class="footer">
-      <p>Powered by <strong>yt-dlp</strong></p>
+      <p>Created by <strong>Talu Khulapwan</strong></p>
     </footer>
   </div>
 
