@@ -1,0 +1,74 @@
+=============================================================
+  Tatarus YT Downloader - Server Commands
+  คำสั่งจัดการ Server พื้นฐาน
+=============================================================
+
+# ==========================================
+# Windows Commands
+# ==========================================
+
+# เริ่ม Server (Hidden)
+wscript start_server.vbs
+
+# ดู Process ที่รันอยู่
+tasklist | findstr python
+
+# หยุด Server
+taskkill /f /im pythonw.exe
+
+# ==========================================
+# Linux Commands (systemd)
+# ==========================================
+
+# เริ่ม Server
+systemctl --user start tatarus-server.service
+
+# หยุด Server
+systemctl --user stop tatarus-server.service
+
+# รีสตาร์ท Server
+systemctl --user restart tatarus-server.service
+
+# ดูสถานะ
+systemctl --user status tatarus-server.service
+
+# ดู Log
+journalctl --user -u tatarus-server -f
+
+# เปิด/ปิด Auto-start
+systemctl --user enable tatarus-server.service
+systemctl --user disable tatarus-server.service
+
+# ==========================================
+# macOS Commands (launchd)
+# ==========================================
+
+# โหลด Service (เริ่ม)
+launchctl load ~/Library/LaunchAgents/com.tatarus.ytdownloader.plist
+
+# ยกเลิก Service (หยุด)
+launchctl unload ~/Library/LaunchAgents/com.tatarus.ytdownloader.plist
+
+# ดู Log
+tail -f /tmp/tatarus-server.log
+
+# ==========================================
+# Manual Server (ทุก Platform)
+# ==========================================
+
+# รัน Server แบบ Manual (เห็น console)
+cd server
+python3 app.py
+
+# ==========================================
+# API Endpoints (Port 4321)
+# ==========================================
+
+# ดูสถานะ Server
+curl http://localhost:4321/api/status
+
+# ปลุก Server
+curl http://localhost:4321/api/wakeup
+
+# ดูข้อมูลวิดีโอ
+curl "http://localhost:4321/api/info?url=https://www.youtube.com/watch?v=VIDEO_ID"

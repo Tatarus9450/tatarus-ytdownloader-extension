@@ -3,6 +3,8 @@
 # ============================================================
 # Tatarus YT Downloader - One-Time Installer
 # Auto-installs Python and FFmpeg if not found
+# FFmpeg stored in script folder (not temp)
+# Server runs as background service (no visible console)
 # ============================================================
 
 echo ""
@@ -14,10 +16,22 @@ echo ""
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SERVER_SCRIPT="$SCRIPT_DIR/server/app.py"
+FFMPEG_DIR="$SCRIPT_DIR/ffmpeg"
+
+# Detect OS
+detect_os() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        echo "macos"
+    else
+        echo "linux"
+    fi
+}
+
+OS_TYPE=$(detect_os)
 
 # Detect package manager
 get_pkg_manager() {
-    if [[ "$OSTYPE" == "darwin"* ]]; then
+    if [[ "$OS_TYPE" == "macos" ]]; then
         echo "brew"
     elif command -v apt-get &> /dev/null; then
         echo "apt"
@@ -88,19 +102,41 @@ fi
 echo "✅ Python3: $(python3 --version)"
 
 # ============================================================
-# Check and Install FFmpeg
+# Check and Install FFmpeg (prefer script folder)
 # ============================================================
-if ! command -v ffmpeg &> /dev/null; then
-    echo "⚠️  FFmpeg not found! (Required for MP3 conversion)"
-    read -p "   Install FFmpeg automatically? (y/n): " -n 1 -r
+echo ""
+echo "🎬 Checking FFmpeg..."
+
+# Check local folder first
+if [[ -f "$FFMPEG_DIR/ffmpeg" ]]; then
+    export PATH="$FFMPEG_DIR:$PATH"
+    echo "✅ FFmpeg found (local): $FFMPEG_DIR"
+elif command -v ffmpeg &> /dev/null; then
+    echo "✅ FFmpeg found (system): $(which ffmpeg)"
+else
+    echo "⚠️  FFmpeg not found!"
+    read -p "   Install FFmpeg? (y/n): " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        install_package "ffmpeg"
+        mkdir -p "$FFMPEG_DIR"
+        
+        if [[ "$OS_TYPE" == "macos" ]]; then
+            # macOS - download static build to script folder
+            echo "📥 Downloading FFmpeg to script folder..."
+            FFMPEG_URL="https://evermeet.cx/ffmpeg/getrelease/zip"
+            curl -L "$FFMPEG_URL" -o "$SCRIPT_DIR/ffmpeg.zip"
+            unzip -o "$SCRIPT_DIR/ffmpeg.zip" -d "$FFMPEG_DIR"
+            rm "$SCRIPT_DIR/ffmpeg.zip"
+            chmod +x "$FFMPEG_DIR/ffmpeg"
+            export PATH="$FFMPEG_DIR:$PATH"
+            echo "✅ FFmpeg installed to: $FFMPEG_DIR"
+        else
+            # Linux - use package manager (cleaner)
+            install_package "ffmpeg"
+        fi
     else
         echo "⚠️  Warning: MP3 conversion won't work without FFmpeg"
     fi
-else
-    echo "✅ FFmpeg: $(ffmpeg -version 2>&1 | head -1)"
 fi
 
 # ============================================================
@@ -113,16 +149,22 @@ pip3 install -r requirements.txt -q
 echo "✅ Dependencies installed"
 
 # ============================================================
-# Setup Startup Service
+# Setup Startup Service (runs in background, no console)
 # ============================================================
-if [[ "$OSTYPE" == "darwin"* ]]; then
+if [[ "$OS_TYPE" == "macos" ]]; then
     echo ""
-    echo "🍎 Setting up macOS LaunchAgent..."
+    echo "🍎 Setting up macOS LaunchAgent (background service)..."
     
     PLIST_DIR="$HOME/Library/LaunchAgents"
     PLIST_FILE="$PLIST_DIR/com.tatarus.ytdownloader.plist"
     
     mkdir -p "$PLIST_DIR"
+    
+    # Add FFMPEG_DIR to PATH in plist if local ffmpeg exists
+    FFMPEG_PATH_ENV=""
+    if [[ -f "$FFMPEG_DIR/ffmpeg" ]]; then
+        FFMPEG_PATH_ENV="$FFMPEG_DIR:"
+    fi
     
     cat > "$PLIST_FILE" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -140,6 +182,11 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     <true/>
     <key>KeepAlive</key>
     <false/>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>${FFMPEG_PATH_ENV}/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
     <key>StandardOutPath</key>
     <string>/tmp/tatarus-server.log</string>
     <key>StandardErrorPath</key>
@@ -151,16 +198,22 @@ EOF
     launchctl unload "$PLIST_FILE" 2>/dev/null
     launchctl load "$PLIST_FILE"
     
-    echo "✅ LaunchAgent installed"
+    echo "✅ LaunchAgent installed (runs in background)"
     
 else
     echo ""
-    echo "🐧 Setting up Linux systemd service..."
+    echo "🐧 Setting up Linux systemd service (background)..."
     
     SERVICE_DIR="$HOME/.config/systemd/user"
     SERVICE_FILE="$SERVICE_DIR/tatarus-server.service"
     
     mkdir -p "$SERVICE_DIR"
+    
+    # Add FFMPEG_DIR to PATH if local ffmpeg exists
+    EXTRA_PATH=""
+    if [[ -f "$FFMPEG_DIR/ffmpeg" ]]; then
+        EXTRA_PATH="Environment=PATH=$FFMPEG_DIR:\$PATH"
+    fi
     
     cat > "$SERVICE_FILE" << EOF
 [Unit]
@@ -173,6 +226,7 @@ ExecStart=$(which python3) $SERVER_SCRIPT
 Restart=on-failure
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1
+$EXTRA_PATH
 
 [Install]
 WantedBy=default.target
@@ -182,13 +236,14 @@ EOF
     systemctl --user enable tatarus-server.service
     systemctl --user start tatarus-server.service
     
-    echo "✅ Systemd service installed"
+    echo "✅ Systemd service installed (runs in background)"
 fi
 
 echo ""
 echo "╔═══════════════════════════════════════════════════════════╗"
 echo "║     ✅ Installation Complete!                             ║"
 echo "╠═══════════════════════════════════════════════════════════╣"
+echo "║  • Server runs as BACKGROUND SERVICE (no console)         ║"
 echo "║  • Server starts automatically with your computer         ║"
 echo "║  • Server starts in SLEEP mode (low resources)            ║"
 echo "║  • Extension wakes it up when needed                      ║"
