@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Tatarus YT Downloader",
-  "version": "1.1.0",
-  "description": "Download YouTube videos & audio easily | ดาวน์โหลดวิดีโอและเพลงจาก YouTube ได้ง่ายๆ",
+  "version": "1.2.0",
+  "description": "Download YouTube videos & audio in local device | ดาวน์โหลดวิดีโอและเพลงจาก YouTube บนอุปกรณ์ของคุณโดยไม่ประมวลผลบนเซิร์ฟเวอร์",
   "author": "Tatarus",
   "icons": {
     "16": "icons/icon-16.png",
@@ -25,7 +25,6 @@
   ],
   "host_permissions": [
     "*://www.youtube.com/*",
-    "*://youtube.com/*",
-    "https://*.cobalt.tools/*"
+    "*://youtube.com/*"
   ]
 }

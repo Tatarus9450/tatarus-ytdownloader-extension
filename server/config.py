@@ -7,7 +7,7 @@ from pathlib import Path
 
 # Server Configuration
 HOST = '127.0.0.1'
-PORT = 5000
+PORT = 4321
 DEBUG = True
 
 # Download Configuration

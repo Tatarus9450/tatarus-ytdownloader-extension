@@ -69,6 +69,24 @@
         </div>
       </div>
 
+      <!-- Playlist Options (hidden by default) -->
+      <div id="playlist-section" class="playlist-section hidden">
+        <div class="playlist-badge">
+          <span class="playlist-icon">📋</span>
+          <span id="playlist-info">Playlist (0 videos)</span>
+        </div>
+        <div class="playlist-options">
+          <label class="playlist-option">
+            <input type="radio" name="playlist-mode" value="single" checked>
+            <span class="playlist-label">⬇️ This video only</span>
+          </label>
+          <label class="playlist-option">
+            <input type="radio" name="playlist-mode" value="playlist">
+            <span class="playlist-label">📁 Entire playlist (<span id="playlist-count">0</span>)</span>
+          </label>
+        </div>
+      </div>
+
       <!-- Format Selection -->
       <div class="format-section">
         <h3 class="section-title">Select Format</h3>
@@ -128,6 +146,8 @@
 
       <!-- Download Progress -->
       <div id="progress-container" class="progress-container hidden">
+        <div id="progress-playlist-title" class="progress-playlist-title"></div>
+        <div id="progress-current-title" class="progress-current-title"></div>
         <div class="progress-info">
           <span class="progress-label">Downloading...</span>
           <span class="progress-percent" id="progress-percent">0%</span>
@@ -135,6 +155,9 @@
         <div class="progress-bar">
           <div class="progress-fill" id="progress-fill"></div>
         </div>
+        <button id="cancel-btn" class="btn btn-cancel">
+          ❌ Cancel Download
+        </button>
       </div>
     </div>
 
