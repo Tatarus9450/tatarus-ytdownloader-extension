@@ -2,7 +2,7 @@
 
 # ============================================================
 # Tatarus YT Downloader - One-Time Installer
-# Auto-installs Python if not found
+# Auto-installs Python and FFmpeg if not found
 # ============================================================
 
 echo ""
@@ -15,64 +15,109 @@ echo ""
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SERVER_SCRIPT="$SCRIPT_DIR/server/app.py"
 
-# Function to install Python
-install_python() {
-    echo "📦 Installing Python3..."
-    
+# Detect package manager
+get_pkg_manager() {
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        # macOS - Use Homebrew
-        if ! command -v brew &> /dev/null; then
-            echo "📦 Installing Homebrew first..."
-            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-        fi
-        brew install python3
+        echo "brew"
+    elif command -v apt-get &> /dev/null; then
+        echo "apt"
+    elif command -v dnf &> /dev/null; then
+        echo "dnf"
+    elif command -v yum &> /dev/null; then
+        echo "yum"
+    elif command -v pacman &> /dev/null; then
+        echo "pacman"
     else
-        # Linux - Detect package manager
-        if command -v apt-get &> /dev/null; then
-            sudo apt-get update
-            sudo apt-get install -y python3 python3-pip
-        elif command -v dnf &> /dev/null; then
-            sudo dnf install -y python3 python3-pip
-        elif command -v yum &> /dev/null; then
-            sudo yum install -y python3 python3-pip
-        elif command -v pacman &> /dev/null; then
-            sudo pacman -S --noconfirm python python-pip
-        else
-            echo "❌ Could not detect package manager!"
-            echo "   Please install Python3 manually: https://python.org"
-            exit 1
-        fi
+        echo "unknown"
     fi
-    
-    echo "✅ Python3 installed successfully!"
 }
 
-# Check Python - auto-install if not found
+PKG_MANAGER=$(get_pkg_manager)
+
+# Install package function
+install_package() {
+    local pkg=$1
+    echo "📦 Installing $pkg..."
+    
+    case $PKG_MANAGER in
+        brew)
+            if ! command -v brew &> /dev/null; then
+                echo "📦 Installing Homebrew first..."
+                /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+            fi
+            brew install $pkg
+            ;;
+        apt)
+            sudo apt-get update -qq
+            sudo apt-get install -y $pkg
+            ;;
+        dnf)
+            sudo dnf install -y $pkg
+            ;;
+        yum)
+            sudo yum install -y $pkg
+            ;;
+        pacman)
+            sudo pacman -S --noconfirm $pkg
+            ;;
+        *)
+            echo "❌ Unknown package manager!"
+            return 1
+            ;;
+    esac
+}
+
+# ============================================================
+# Check and Install Python
+# ============================================================
 if ! command -v python3 &> /dev/null; then
     echo "⚠️  Python3 not found!"
     read -p "   Install Python3 automatically? (y/n): " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        install_python
+        if [[ $PKG_MANAGER == "apt" ]]; then
+            install_package "python3 python3-pip"
+        else
+            install_package "python3"
+        fi
     else
         echo "❌ Python3 is required. Exiting."
         exit 1
     fi
 fi
+echo "✅ Python3: $(python3 --version)"
 
-echo "✅ Python3 found: $(python3 --version)"
+# ============================================================
+# Check and Install FFmpeg
+# ============================================================
+if ! command -v ffmpeg &> /dev/null; then
+    echo "⚠️  FFmpeg not found! (Required for MP3 conversion)"
+    read -p "   Install FFmpeg automatically? (y/n): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        install_package "ffmpeg"
+    else
+        echo "⚠️  Warning: MP3 conversion won't work without FFmpeg"
+    fi
+else
+    echo "✅ FFmpeg: $(ffmpeg -version 2>&1 | head -1)"
+fi
 
-# Install dependencies
+# ============================================================
+# Install Python Dependencies
+# ============================================================
 echo ""
-echo "📦 Installing dependencies..."
+echo "📦 Installing Python dependencies..."
 cd "$SCRIPT_DIR/server"
 pip3 install -r requirements.txt -q
 echo "✅ Dependencies installed"
 
-# Detect OS and install service
+# ============================================================
+# Setup Startup Service
+# ============================================================
 if [[ "$OSTYPE" == "darwin"* ]]; then
     echo ""
-    echo "🍎 macOS detected - Installing LaunchAgent..."
+    echo "🍎 Setting up macOS LaunchAgent..."
     
     PLIST_DIR="$HOME/Library/LaunchAgents"
     PLIST_FILE="$PLIST_DIR/com.tatarus.ytdownloader.plist"
@@ -110,7 +155,7 @@ EOF
     
 else
     echo ""
-    echo "🐧 Linux detected - Installing systemd service..."
+    echo "🐧 Setting up Linux systemd service..."
     
     SERVICE_DIR="$HOME/.config/systemd/user"
     SERVICE_FILE="$SERVICE_DIR/tatarus-server.service"
