@@ -25,6 +25,7 @@
 1. Open `chrome://extensions/` | เปิด `chrome://extensions/`
 2. Enable **Developer mode** | เปิด **Developer mode**
 3. **Load unpacked** → Select this folder | เลือกโฟลเดอร์นี้
+4. **Grant Permissions** → If prompted, allow access to "read and modify data on www.youtube.com" (for cookies) | อนุญาตให้เข้าถึง cookies หากมีการแจ้งเตือน
 
 ### Step 2: Install Server (One-Time) | ติดตั้ง Server (ครั้งเดียว)
 

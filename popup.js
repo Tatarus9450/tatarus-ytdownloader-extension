@@ -308,6 +308,26 @@ function handleFormatChange(event) {
   }
 }
 
+// Get cookies for the current URL
+async function getCookies(url) {
+  if (!chrome.cookies) return [];
+
+  try {
+    const urlObj = new URL(url);
+    const domain = urlObj.hostname;
+
+    // Get cookies for the domain
+    const cookies = await new Promise((resolve) => {
+      chrome.cookies.getAll({ domain: domain }, resolve);
+    });
+
+    return cookies;
+  } catch (error) {
+    console.error('Error getting cookies:', error);
+    return [];
+  }
+}
+
 // Handle download
 async function handleDownload() {
   if (isDownloading || !currentVideoInfo) return;
@@ -324,6 +344,7 @@ async function handleDownload() {
 
   try {
     const url = await getCurrentTabUrl();
+    const cookies = await getCookies(url);
 
     const response = await fetch(`${API_BASE_URL}/download`, {
       method: 'POST',
@@ -332,7 +353,8 @@ async function handleDownload() {
         url: url,
         format: currentFormat,
         quality: selectedQuality,
-        download_playlist: isPlaylist && downloadPlaylistMode
+        download_playlist: isPlaylist && downloadPlaylistMode,
+        cookies: cookies
       })
     });
 
